@@ -1,0 +1,723 @@
+<openerp>
+  <data>
+
+    <!--Bank & Cash Transfers-->
+    <record model = 'ir.ui.view' id = 'cash_management_bank_transfer_form'>
+      <field name = 'name'>Bank And Cash Transfer</field>
+      <field name = 'model'>cash.management.bank.transfer.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+          <header>
+            <button name="action_post" type = "object" string = "Post"  confirm = "Transfer Funds?" attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+            <button name="confirm" type = "object" string = "Confirm Transfer" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
+            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+            <field name = 'state' widget = 'statusbar'/>
+          </header>
+          <sheet>
+            <label for = "name"/>
+            <field name = 'name'/>
+
+
+            <group>
+              <group string = 'Transfer From'>
+                <field name = 'paying_bank'/>
+                <field name = 'paying_account_no'/>
+                <field name = 'paying_account_balance'/>
+
+
+              </group>
+              <group string = 'Transfer To'>
+                <field name = 'receiving_bank'/>
+                <field name = 'receiving_account_no'/>
+                <field name = 'receiving_account_balance'/>
+
+              </group>
+              <group string = "Transfer Details">
+                <field name = 'amount'/>
+                <field name = 'date'/>
+                <field name = 'posted'/>
+              </group>
+              <group>
+                <field name = 'remarks'/>
+              </group>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_bank_transfers_tree_view'>
+      <field name = 'name'>Bank And Cash Transfers</field>
+      <field name = 'model'>cash.management.bank.transfer.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'paying_bank'/>
+          <field name = 'receiving_bank'/>
+          <field name = 'amount'/>
+          <field name = 'date'/>
+        </tree>
+      </field>
+    </record>
+
+<!--Receipts-->
+
+  <record model = 'ir.ui.view' id = 'cash_management_receipts_form'>
+      <field name = 'name'>Receipts</field>
+      <field name = 'model'>cash.management.receipt.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="action_post" type = "object" string = "Post Receipt"  confirm = "Post Receipts?" class="oe_highlight"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'receiving_bank'/>
+              <field name = 'receiving_account_no'/>
+              <field name = 'received_from'/>
+              <field name = 'cashier'/>
+            </group>
+            <group>
+              <field name = 'remarks'/>
+              <field name = 'posted'/>
+
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = 'bottom'>
+                  <field name = 'receipt_type'/>
+                  <!--<field name = 'account_no'/>-->
+                  <field name = 'account_name'/>
+                  <field name = 'description'/>
+                  <field name = 'amount'/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_receipts_tree_view'>
+      <field name = 'name'>Receipts</field>
+      <field name = 'model'>cash.management.receipt.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'date'/>
+          <field name = 'received_from'/>
+          <field name = 'total_amount'/>
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+    </record>
+
+    <!--Payments-->
+
+    <record model = 'ir.ui.view' id = 'cash_management_payments_form'>
+      <field name = 'name'>Payment Voucher</field>
+      <field name = 'model'>cash.management.payment.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="action_post" type = "object" string = "Post Payments"  confirm = "Post Payments?" class="oe_highlight"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+          <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'paying_bank'/>
+              <field name = 'paying_account_no'/>
+              <field name = 'payment_method'/>
+              <field name = 'cheque_no' attrs="{'invisible': [('payment_method', '!=', 'cheque')]}"/>
+              <field name = 'payment_to'/>
+              <field name = 'on_behalf_of'/>
+              <field name = 'cashier'/>
+              <field name = 'posted'/>
+            </group>
+            <group>
+              <field name = 'payment_narration'/>
+
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = 'bottom'>
+                  <field name = 'payment_type'/>
+                  <!--<field name = 'account_no'/>-->
+                  <field name = 'account_name'/>
+                  <field name = 'description'/>
+                  <field name = 'tax'/>
+                  <field name = 'amount'/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_payments_tree_view'>
+      <field name = 'name'>Payments</field>
+      <field name = 'model'>cash.management.payment.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'date'/>
+          <field name = 'payment_to'/>
+          <field name = 'total_amount'/>
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+    </record>
+
+    <!--Staff Advance-->
+
+    <record model = 'ir.ui.view' id = 'cash_management_staff_advance_form_view'>
+      <field name = 'name'>Staff Advance</field>
+      <field name = 'model'>cash.management.staff.advance.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="action_post" type = "object" string = "Post"  confirm = "Advance Funds?" attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+            <button name="confirm" type = "object" string = "Confirm" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
+            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'advance_to'/>
+              <field name = 'paying_bank'/>
+              <!--<field name = 'paying_account_name'/>-->
+              <field name = 'payment_method'/>
+              <field name = 'cheque_no' attrs="{'invisible': [('payment_method', '!=', 'cheque')]}"/>
+              <field name = 'total_amount'/>
+              <field name = 'posted'/>
+            </group>
+            <group>
+              <field name = 'purpose'/>
+
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = 'bottom'>
+                  <field name = 'advance_type'/>
+                  <!--<field name = 'account_no'/>-->
+                  <field name = 'account_name'/>
+                  <field name = 'description'/>
+                  <field name = 'amount'/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_staff_advance_tree_view'>
+      <field name = 'name'>Staff Advance</field>
+      <field name = 'model'>cash.management.staff.advance.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'date'/>
+          <field name = 'advance_to'/>
+          <field name = 'total_amount'/>
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+    </record>
+
+    <!--Staff Advance Surrender-->
+    <record model = 'ir.ui.view' id = 'cash_management_staff_advance_surrender_form_view'>
+      <field name = 'name'>Staff Advance Surrender</field>
+      <field name = 'model'>cash.management.staff.advance.surrender.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="get_advance_lines" type = "object" string = "Get Advance Lines" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+          <button name="action_post" type = "object" string = "Post"  confirm = "Post Surrender?" attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+            <button name="confirm" type = "object" string = "Confirm" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
+            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'source_document'/>
+              <field name = 'surrendered_by'/>
+              <field name = 'advanced_amount'/>
+              <field name = 'posted'/>
+              <field name = 'cashier'/>
+            </group>
+            <group>
+              <field name = 'remarks'/>
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = "bottom">
+                  <field name = 'advance_type'/>
+                  <field name = 'account_name'/>
+                  <field name = 'description'/>
+                  <field name = 'amount_advanced'/>
+                  <field name = 'actual_spent'/>
+                  <field name = 'balance'/>
+
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record model = 'ir.ui.view' id = 'cash_management_staff_advance_surrender_tree_view'>
+      <field name = 'name'>Staff Advance Surrender</field>
+      <field name = 'model'>cash.management.staff.advance.surrender.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'surrendered_by'/>
+          <field name = 'advanced_amount'/>
+          <field name = 'balance'/>
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+  </record>
+
+    <!--Travel Advance-->
+
+    <record model = 'ir.ui.view' id = 'cash_management_travel_advance_form_view'>
+      <field name = 'name'>Travel Advance</field>
+      <field name = 'model'>cash.management.travel.advance.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="action_post" type = "object" string = "Post"  confirm = "Advance Funds?" attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+            <button name="confirm" type = "object" string = "Confirm" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
+            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'advance_to'/>
+              <field name = 'paying_bank'/>
+              <!--<field name = 'paying_account_name'/>-->
+              <field name = 'payment_method'/>
+              <field name = 'cheque_no' attrs="{'invisible': [('payment_method', '!=', 'cheque')]}"/>
+              <field name = 'total_amount'/>
+              <field name = 'posted'/>
+            </group>
+            <group>
+              <field name = 'purpose'/>
+
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = 'bottom'>
+                  <field name = 'advance_type'/>
+                  <field name = 'account_name'/>
+                  <field name = 'travel_from'/>
+                  <field name = 'travel_to'/>
+                  <field name = 'description'/>
+                  <field name = 'amount'/>
+
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_travel_advance_tree_view'>
+      <field name = 'name'>Payments</field>
+      <field name = 'model'>cash.management.travel.advance.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'date'/>
+          <field name = 'advance_to'/>
+          <field name = 'total_amount'/>
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+    </record>
+
+    <!--Travel Advance Surrender-->
+    <record model = 'ir.ui.view' id = 'cash_management_travel_advance_surrender_form_view'>
+      <field name = 'name'>Travel Advance Surrender</field>
+      <field name = 'model'>cash.management.travel.advance.surrender.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="get_travel_lines" type = "object" string = "Get Travel Lines"  attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+          <button name="action_post" type = "object" string = "Post"  confirm = "Post Surrender?" attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+            <button name="confirm" type = "object" string = "Confirm" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
+            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'source_document'/>
+              <field name = 'surrendered_by'/>
+              <field name = 'advanced_amount'/>
+              <field name = 'posted'/>
+              <field name = 'cashier'/>
+            </group>
+            <group>
+              <field name = 'remarks'/>
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = 'bottom'>
+                  <field name = 'advance_type'/>
+                  <field name = 'account_name'/>
+                  <field name = 'travel_from'/>
+                  <field name = 'travel_to'/>
+                  <field name = 'amount_advanced'/>
+                  <field name = 'actual_spent'/>
+                  <field name = 'balance'/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record model = 'ir.ui.view' id = 'cash_management_travel_advance_surrender_tree_view'>
+      <field name = 'name'>Travel Advance Surrender</field>
+      <field name = 'model'>cash.management.travel.advance.surrender.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'surrendered_by'/>
+          <field name = 'advanced_amount'/>
+
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+  </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_general_setup_form'>
+      <field name = 'name'>General Setup</field>
+      <field name = 'model'>cash.management.general.setup</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+          <sheet>
+
+            <group>
+              <field name = 'name'/>
+            </group>
+              <notebook>
+
+                <page string = 'Accounting'>
+                  <group>
+                    <group>
+                      <field name = 'staff_advance_receivable_account'/>
+                      <field name = 'staff_travel_receivable_account'/>
+                    </group>
+                    <group>
+
+                    </group>
+                  </group>
+                </page>
+
+                <page string = 'Numbering'>
+                  <group>
+                    <field name = 'payment_voucher_numbers'/>
+                    <field name = 'receipt_numbers'/>
+                    <field name = 'bank_transfer_numbers'/>
+                    <field name = 'staff_advance_numbers'/>
+                    <field name = 'staff_advance_surrender_numbers'/>
+                    <field name = 'travel_advance_numbers'/>
+                    <field name = 'travel_advance_surrender_numbers'/>
+                  </group>
+                </page>
+              </notebook>
+
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_receipts_and_payment_types_form'>
+      <field name = 'name'>Receipt and Payment Types</field>
+      <field name = 'model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+          <sheet>
+            <group>
+              <field name = 'name'/>
+              <field name = 'description'/>
+              <field name = 'transaction_type'/>
+              <!--<field name = 'account_no'/>-->
+              <field name = 'account_name'/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_receipts_and_payments_search_view'>
+      <field name = 'name'>Receipts and Payment Types</field>
+      <field name = 'model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'arch' type = 'xml'>
+        <search>
+          <field name = 'transaction_type'/>
+        </search>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_receipts_and_payment_types_tree'>
+      <field name = 'name'>Receipt and Payment Types</field>
+      <field name = 'model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'description'/>
+
+          <field name = 'account_name'/>
+          <!--<field name = 'account_no'/>-->
+        </tree>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_travel_destinations_tree_view'>
+      <field name = 'name'>Travel Destinations</field>
+      <field name = 'model'>cash.management.travel.destinations</field>
+      <field name = 'arch' type = 'xml'>
+        <tree editable = 'bottom'>
+          <field name = 'name'/>
+          <field name = 'country'/>
+        </tree>
+      </field>
+    </record>
+
+    <!--Bank & Cash Transfer-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_bank_transfer_action'>
+      <field name = 'name'>Bank and Cash Transfer</field>
+      <field name = 'res_model'>cash.management.bank.transfer.header</field>
+      <field name = "domain">[('posted','=',0)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Cash Management' id = 'cash_management_main_menu'/>
+    <menuitem name = 'Bank and Cash Transfers' id = 'cash_management_bank_transfers_main_menu' parent = 'cash_management_main_menu' sequence = '10'/>
+    <menuitem name = 'Cash Transfer List' id = 'cash_management_bank_transfer' parent = 'cash_management_bank_transfers_main_menu' action = 'cash_management_bank_transfer_action' sequence = '10'/>
+
+    <!--Posted Bank & Cash Transfers-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_bank_transfer_history_action'>
+      <field name = 'name'>Posted Bank and Cash Transfer</field>
+      <field name = 'res_model'>cash.management.bank.transfer.header</field>
+      <field name = "domain">[('posted','=',1)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'History' id = 'cash_management_bank_transfers_history_main_menu' parent = 'cash_management_bank_transfers_main_menu' sequence = '90'/>
+    <menuitem name = 'Posted Cash Transfer List' id = 'cash_management_bank_transfer_history' parent = 'cash_management_bank_transfers_history_main_menu' action = 'cash_management_bank_transfer_history_action' sequence = '10'/>
+
+    <!--Receipts-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_receipts_action'>
+      <field name = 'name'>Cash Receipts</field>
+      <field name = 'res_model'>cash.management.receipt.header</field>
+      <field name = "domain">[('posted','=',0)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Receipts' id = 'cash_management_receipts_main_menu' parent = 'cash_management_main_menu' sequence = "20"/>
+    <menuitem name = 'Receipts List' id = 'cash_management_receipts_list' parent = 'cash_management_receipts_main_menu' action = 'cash_management_receipts_action' sequence = "10"/>
+
+    <!--Posted Receipts-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_receipts_history_action'>
+      <field name = 'name'>Posted Cash Receipts</field>
+      <field name = 'res_model'>cash.management.receipt.header</field>
+      <field name = "domain">[('posted','=',1)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'History' id = 'cash_management_receipts_history_main_menu' parent = 'cash_management_receipts_main_menu' sequence = "90"/>
+    <menuitem name = 'Posted Receipt' id = 'cash_management_receipts_list_history' parent = 'cash_management_receipts_history_main_menu' action = 'cash_management_receipts_history_action' sequence = "10"/>
+
+    <!--Payments-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_payments_action'>
+      <field name = 'name'>Cash Payments</field>
+      <field name = 'res_model'>cash.management.payment.header</field>
+      <field name = "domain">[('posted','=',0)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Payments' id = 'cash_management_payments_main_menu' parent = 'cash_management_main_menu' sequence = "30"/>
+    <menuitem name = 'Payments List' id = 'cash_management_payments_list' parent = 'cash_management_payments_main_menu' action = "cash_management_payments_action" sequence = "10"/>
+
+    <!--Posted Payments-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_payments_history_action'>
+      <field name = 'name'>Posted Payments</field>
+      <field name = 'res_model'>cash.management.payment.header</field>
+      <field name = "domain">[('posted','=',1)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'History' id = 'cash_management_payments_history_main_menu' parent = 'cash_management_payments_main_menu' sequence = "90"/>
+    <menuitem name = 'Posted Payments' id = 'cash_management_payments_list_history' parent = 'cash_management_payments_history_main_menu' action = "cash_management_payments_history_action" sequence = "10"/>
+
+    <!--Staff Advance-->
+
+    <record model = 'ir.actions.act_window' id = 'cash_management_staff_advance_action'>
+      <field name = 'name'>Staff Advance</field>
+      <field name = 'res_model'>cash.management.staff.advance.header</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Staff Advances' id = 'cash_management_staff_advance_main_menu' parent = "cash_management_main_menu" sequence = "40"/>
+    <menuitem name = 'Staff Advance List' id = 'cash_management_staff_advance_list' parent = "cash_management_staff_advance_main_menu" action = "cash_management_staff_advance_action" sequence = "10"/>
+
+    <!--Staff Advance Surrender-->
+
+    <record model = 'ir.actions.act_window' id = 'cash_management_staff_advance_surrender_action'>
+      <field name = 'name'>Staff Advance Surrender</field>
+      <field name = 'res_model'>cash.management.staff.advance.surrender.header</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Staff Advance Surrender' id = 'cash_management_staff_advance_surrender' parent = "cash_management_staff_advance_main_menu" action = "cash_management_staff_advance_surrender_action" sequence = "15"/>
+
+    <!--Travel Advance-->
+
+    <record model = 'ir.actions.act_window' id = 'cash_management_travel_advance_action'>
+      <field name = 'name'>Travel Advance</field>
+      <field name = 'res_model'>cash.management.travel.advance.header</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Staff Travel' id = 'cash_management_staff_travel_main_menu' parent = "cash_management_main_menu" sequence = "50"/>
+    <menuitem name = "Staff Travel Advance" id = 'cash_management_travel_advance_list' parent = 'cash_management_staff_travel_main_menu' action = "cash_management_travel_advance_action" sequence = "10"/>
+
+    <!--Travel Advance Surrender-->
+
+    <record model = 'ir.actions.act_window' id = 'cash_management_travel_advance_surrender_action'>
+      <field name = 'name'>Travel Advance Surrender</field>
+      <field name = 'res_model'>cash.management.travel.advance.surrender.header</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = "Travel Advance Surrender" id = 'cash_management_travel_advance_surrender' parent = 'cash_management_staff_travel_main_menu' action = "cash_management_travel_advance_surrender_action" sequence = "15"/>
+
+    <record model = 'ir.actions.act_window' id = 'cash_management_general_setup_action'>
+      <field name = 'name'>General Setup</field>
+      <field name = 'res_model'>cash.management.general.setup</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Configuration' id = 'cash_management_configuration_main_menu' parent = 'cash_management_main_menu' sequence = '100'/>
+    <menuitem name = 'General Setup' id = 'cash_management_general_setup' parent = 'cash_management_configuration_main_menu' action = 'cash_management_general_setup_action' sequence = "10"/>
+
+    <!--Receipt Types-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_receipt_types_action'>
+      <field name = 'name'>Receipt Types</field>
+      <field name = 'res_model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+      <field name = 'context'>{'search_default_transaction_type':'receipt', 'default_transaction_type':'receipt'}</field>
+    </record>
+
+    <menuitem name = 'Receipt Types' id = 'cash_management_receipt_types' parent = 'cash_management_receipts_main_menu' action = 'cash_management_receipt_types_action' sequence = "20"/>
+
+    <!--Payment Types-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_payment_types_action'>
+      <field name = 'name'>Payment Types</field>
+      <field name = 'res_model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+      <field name = 'context'>{'search_default_transaction_type':'payment', 'default_transaction_type':'payment'}</field>
+    </record>
+
+    <menuitem name = 'Payment Types' id = 'cash_management_payment_types' parent = 'cash_management_payments_main_menu' action = 'cash_management_payment_types_action' sequence = "20"/>
+
+    <!--Staff Advance Types-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_staff_advance_types_action'>
+      <field name = 'name'>Staff Advance Types</field>
+      <field name = 'res_model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+      <field name = 'context'>{'search_default_transaction_type':'staff', 'default_transaction_type':'staff'}</field>
+    </record>
+
+    <menuitem name = 'Staff Advance Types' id = 'cash_management_advance_types' parent = 'cash_management_staff_advance_main_menu' action = 'cash_management_staff_advance_types_action' sequence = "20"/>
+
+    <!--Travel Advance Types-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_travel_advance_types_action'>
+      <field name = 'name'>Travel Advance Types</field>
+      <field name = 'res_model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+      <field name = 'context'>{'search_default_transaction_type':'travel', 'default_transaction_type':'travel'}</field>
+    </record>
+
+    <menuitem name = 'Travel Advance Types' id = 'cash_management_travel_advance_types' parent = 'cash_management_staff_travel_main_menu' action = 'cash_management_travel_advance_types_action' sequence = "20"/>
+
+    <!--Travel Destinations-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_travel_destinations_action'>
+      <field name = 'name'>Travel Destinations</field>
+      <field name = 'res_model'>cash.management.travel.destinations</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+
+    </record>
+
+    <menuitem name = 'Travel Destinations' id = 'cash_management_travel_destinations' parent = 'cash_management_staff_travel_main_menu' action = 'cash_management_travel_destinations_action' sequence = "30"/>
+
+  </data>
+</openerp>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+  <data>
+    <!--Bank and Cash Transfer Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_bank_trans_id'>
+        <field name = "name">Bank and Cash Transfer Numbers</field>
+        <field name = "code">bank.transfer</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_bank_trans_id">
+        <field name = "name">Bank and Cash Transfer Numbers</field>
+        <field name = "code">bank.transfer</field>
+        <field name = "prefix">CASHTRANSFER</field>
+        <field name = "padding">4</field>
+    </record>
+
+    <!--Payment Voucher Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_payment_voucher_id'>
+        <field name = "name">Payment Voucher Numbers</field>
+        <field name = "code">payment.voucher</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_payment_voucher_id">
+        <field name = "name">Payment Voucher Numbers</field>
+        <field name = "code">payment.voucher</field>
+        <field name = "prefix">PV</field>
+        <field name = "padding">4</field>
+    </record>
+
+    <!--Receipt Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_cash_receipts_id'>
+        <field name = "name">Receipt Numbers</field>
+        <field name = "code">receipt</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_cash_receipts_id">
+        <field name = "name">Receipt Numbers</field>
+        <field name = "code">receipt</field>
+        <field name = "prefix">RCPT</field>
+        <field name = "padding">4</field>
+    </record>
+
+    <!--Staff Advance Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_staff_advance_id'>
+        <field name = "name">Staff Advance Numbers</field>
+        <field name = "code">staff.advance</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_staff_advance_id">
+        <field name = "name">Staff Advance Numbers</field>
+        <field name = "code">staff.advance</field>
+        <field name = "prefix">STADV</field>
+        <field name = "padding">4</field>
+    </record>
+
+    <!--Staff Advance Surrender Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_staff_advance_surrender_id'>
+        <field name = "name">Staff Advance Surrender Numbers</field>
+        <field name = "code">staff.advance.surrender</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_staff_advance_surrender_id">
+        <field name = "name">Staff Advance Surrender Numbers</field>
+        <field name = "code">staff.advance.surrender</field>
+        <field name = "prefix">STADV_SURR</field>
+        <field name = "padding">4</field>
+    </record>
+
+    <!--Travel Advance Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_travel_advance_id'>
+        <field name = "name">Travel Advance Numbers</field>
+        <field name = "code">staff.travel.advance</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_travel_advance_id">
+        <field name = "name">Travel Advance Numbers</field>
+        <field name = "code">staff.travel.advance</field>
+        <field name = "prefix">TRV_SURR</field>
+        <field name = "padding">4</field>
+    </record>
+
+    <!--Travel Advance Surrender Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_travel_advance_surrender_id'>
+        <field name = "name">Travel Advance Surrender Numbers</field>
+        <field name = "code">staff.travel.advance.surrender</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_travel_advance_surrender_id">
+        <field name = "name">Travel Advance Surrender Numbers</field>
+        <field name = "code">staff.travel.advance.surrender</field>
+        <field name = "prefix">TRV_SURR</field>
+        <field name = "padding">4</field>
+    </record>
+
+ </data>
+</openerp>
