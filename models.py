@@ -19,8 +19,12 @@ class payment_header(models.Model):
     posted = fields.Boolean()
     gross_amount = fields.Float()
     tax_amount = fields.Float()
-    total_amount = fields.Float()
+    total_amount = fields.Float(compute = 'calculate_amounts')
     line_ids = fields.One2many('cash.management.payment.lines','header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -37,8 +41,8 @@ class payment_header(models.Model):
     @api.one
     @api.depends('line_ids')
     def calculate_amounts(self):
-        for line in line_ids:
-            self.gross_amount += line.amount
+        self.gross_amount = sum(line.amount for line in self.line_ids)
+        self.total_amount = sum(line.amount for line in self.line_ids)
 
     @api.one
     def action_post(self):
@@ -104,6 +108,10 @@ class receipt_header(models.Model):
     total_amount = fields.Float()
     state = fields.Selection([('draft',"Draft"),('received',"Recieved")])
     line_ids = fields.One2many('cash.management.receipt.lines','header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -177,6 +185,10 @@ class bank_transfer_header(models.Model):
     posted = fields.Boolean()
     amount = fields.Float()
     remarks = fields.Text()
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -262,6 +274,10 @@ class staff_advance_header(models.Model):
     posted = fields.Boolean()
     surrendered = fields.Boolean()
     line_ids = fields.One2many('cash.management.staff.advance.lines', 'header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -345,6 +361,10 @@ class staff_advance_surrender_header(models.Model):
     remarks = fields.Text()
     posted = fields.Boolean()
     line_ids = fields.One2many('cash.management.staff.advance.surrender.lines', 'header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -459,6 +479,10 @@ class travel_advance_header(models.Model):
     posted = fields.Boolean()
     surrendered = fields.Boolean()
     line_ids = fields.One2many('cash.management.travel.advance.lines', 'header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -543,6 +567,10 @@ class travel_advance_surrender_header(models.Model):
     remarks = fields.Text()
     posted = fields.Boolean()
     line_ids = fields.One2many('cash.management.travel.advance.surrender.lines', 'header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
