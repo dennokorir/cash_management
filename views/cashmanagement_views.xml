@@ -8,9 +8,9 @@
       <field name = 'arch' type = 'xml'>
         <form>
           <header>
-            <button name="action_post" type = "object" string = "Post"  confirm = "Transfer Funds?" attrs="{'invisible': [('state', '!=', 'ready')]}" class="oe_highlight"/>
+            <button name="action_post" type = "object" string = "Post"  confirm = "Transfer Funds?" attrs="{'invisible': [('state', '!=', 'ready'),('posted','=','1')]}" class="oe_highlight"/>
             <button name="confirm" type = "object" string = "Confirm Transfer" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
-            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+            <button name="reset" type = "object" string = "Reset to Draft" attrs="{'invisible': [('state', '!=', 'ready'),('posted','=','1')]}"/>
             <field name = 'state' widget = 'statusbar'/>
           </header>
           <sheet>
@@ -54,7 +54,7 @@
           <field name = 'name'/>
           <field name = 'paying_bank'/>
           <field name = 'receiving_bank'/>
-          <field name = 'amount'/>
+          <field name = 'amount' sum="amount"/>
           <field name = 'date'/>
         </tree>
       </field>
@@ -68,7 +68,7 @@
       <field name = 'arch' type = 'xml'>
         <form>
         <header>
-          <button name="action_post" type = "object" string = "Post Receipt"  confirm = "Post Receipts?" class="oe_highlight"/>
+          <button name="action_post" type = "object" string = "Post Receipt"  confirm = "Post Receipts?" class="oe_highlight" attrs="{'invisible': [('posted', '=', '1')]}"/>
           <field name = 'state' widget = 'statusbar'/>
         </header>
         <sheet>
@@ -113,13 +113,13 @@
           <field name = 'name'/>
           <field name = 'date'/>
           <field name = 'received_from'/>
-          <field name = 'total_amount'/>
+          <field name = 'total_amount' sum="total_amount"/>
           <field name = 'cashier'/>
         </tree>
       </field>
     </record>
 
-    <!--Payments-->
+<!--Payments-->
 
     <record model = 'ir.ui.view' id = 'cash_management_payments_form'>
       <field name = 'name'>Payment Voucher</field>
@@ -127,7 +127,7 @@
       <field name = 'arch' type = 'xml'>
         <form>
         <header>
-          <button name="action_post" type = "object" string = "Post Payments"  confirm = "Post Payments?" class="oe_highlight"/>
+          <button name="action_post" type = "object" string = "Post Payments"  confirm = "Post Payments?" class="oe_highlight" attrs="{'invisible': [('posted', '=', '1')]}"/>
           <field name = 'state' widget = 'statusbar'/>
         </header>
           <sheet>
@@ -176,7 +176,70 @@
           <field name = 'name'/>
           <field name = 'date'/>
           <field name = 'payment_to'/>
-          <field name = 'total_amount'/>
+          <field name = 'total_amount' sum="total_amount"/>
+          <field name = 'cashier'/>
+        </tree>
+      </field>
+    </record>
+
+    <!--Petty Cash-->
+
+    <record model = 'ir.ui.view' id = 'cash_management_petty_cash_form'>
+      <field name = 'name'>Petty Cash Voucher</field>
+      <field name = 'model'>cash.management.petty.cash.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+        <header>
+          <button name="action_post" type = "object" string = "Post Payments"  confirm = "Post Payments?" class="oe_highlight" attrs="{'invisible': [('posted', '=', '1')]}"/>
+          <field name = 'state' widget = 'statusbar'/>
+        </header>
+          <sheet>
+          <group>
+            <group>
+              <field name = 'name'/>
+              <field name = 'date'/>
+              <field name = 'paying_bank'/>
+              <field name = 'paying_account_no'/>
+              <field name = 'payment_method'/>
+              <field name = 'cheque_no' attrs="{'invisible': [('payment_method', '!=', 'cheque')]}"/>
+              <field name = 'payment_to'/>
+              <field name = 'on_behalf_of'/>
+              <field name = 'cashier'/>
+              <field name = 'posted'/>
+            </group>
+            <group>
+              <field name = 'payment_narration'/>
+
+            </group>
+          </group>
+          <notebook>
+            <page>
+              <field name = 'line_ids'>
+                <tree editable = 'bottom'>
+                  <field name = 'payment_type'/>
+                  <!--<field name = 'account_no'/>-->
+                  <field name = 'account_name'/>
+                  <field name = 'description'/>
+                  <field name = 'tax'/>
+                  <field name = 'amount'/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_petty_cash_tree_view'>
+      <field name = 'name'>Petty Cash</field>
+      <field name = 'model'>cash.management.petty.cash.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'date'/>
+          <field name = 'payment_to'/>
+          <field name = 'total_amount' sum="total_amount"/>
           <field name = 'cashier'/>
         </tree>
       </field>
@@ -239,7 +302,7 @@
           <field name = 'name'/>
           <field name = 'date'/>
           <field name = 'advance_to'/>
-          <field name = 'total_amount'/>
+          <field name = 'total_amount' sum="total_amount"/>
           <field name = 'cashier'/>
         </tree>
       </field>
@@ -300,8 +363,8 @@
         <tree>
           <field name = 'name'/>
           <field name = 'surrendered_by'/>
-          <field name = 'advanced_amount'/>
-          <field name = 'balance'/>
+          <field name = 'advanced_amount' sum="advanced_amount"/>
+          <field name = 'balance' sum="balance"/>
           <field name = 'cashier'/>
         </tree>
       </field>
@@ -366,7 +429,7 @@
           <field name = 'name'/>
           <field name = 'date'/>
           <field name = 'advance_to'/>
-          <field name = 'total_amount'/>
+          <field name = 'total_amount' sum="total_amount"/>
           <field name = 'cashier'/>
         </tree>
       </field>
@@ -427,7 +490,7 @@
         <tree>
           <field name = 'name'/>
           <field name = 'surrendered_by'/>
-          <field name = 'advanced_amount'/>
+          <field name = 'advanced_amount' sum="advanced_amount"/>
 
           <field name = 'cashier'/>
         </tree>
@@ -460,6 +523,7 @@
 
                 <page string = 'Numbering'>
                   <group>
+                    <field name = 'petty_cash_voucher_numbers'/>
                     <field name = 'payment_voucher_numbers'/>
                     <field name = 'receipt_numbers'/>
                     <field name = 'bank_transfer_numbers'/>
@@ -608,6 +672,32 @@
     <menuitem name = 'History' id = 'cash_management_payments_history_main_menu' parent = 'cash_management_payments_main_menu' sequence = "90"/>
     <menuitem name = 'Posted Payments' id = 'cash_management_payments_list_history' parent = 'cash_management_payments_history_main_menu' action = "cash_management_payments_history_action" sequence = "10"/>
 
+    <!--Petty Cash-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_petty_cash_action'>
+      <field name = 'name'>Petty Cash</field>
+      <field name = 'res_model'>cash.management.petty.cash.header</field>
+      <field name = "domain">[('posted','=',0)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Petty Cash' id = 'cash_management_petty_cash_main_menu' parent = 'cash_management_main_menu' sequence = "25"/>
+    <menuitem name = 'Petty Cash Requisitions' id = 'cash_management_petty_cash_list' parent = 'cash_management_petty_cash_main_menu' action = "cash_management_petty_cash_action" sequence = "10"/>
+
+    <!--Posted Petty Cash-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_petty_cash_history_action'>
+      <field name = 'name'>Posted Petty Cash</field>
+      <field name = 'res_model'>cash.management.petty.cash.header</field>
+      <field name = "domain">[('posted','=',1)]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'History' id = 'cash_management_petty_cash_history_main_menu' parent = 'cash_management_petty_cash_main_menu' sequence = "90"/>
+    <menuitem name = 'Posted Petty Cash' id = 'cash_management_petty_cash_list_history' parent = 'cash_management_petty_cash_history_main_menu' action = "cash_management_petty_cash_history_action" sequence = "10"/>
+
     <!--Staff Advance-->
 
     <record model = 'ir.actions.act_window' id = 'cash_management_staff_advance_action'>
@@ -685,6 +775,17 @@
     </record>
 
     <menuitem name = 'Payment Types' id = 'cash_management_payment_types' parent = 'cash_management_payments_main_menu' action = 'cash_management_payment_types_action' sequence = "20"/>
+
+    <!--Petty Cash Types-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_petty_cash_types_action'>
+      <field name = 'name'>Petty Cash Types</field>
+      <field name = 'res_model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+      <field name = 'context'>{'search_default_transaction_type':'petty', 'default_transaction_type':'petty'}</field>
+    </record>
+
+    <menuitem name = 'Petty Cash Types' id = 'cash_management_petty_cash_types' parent = 'cash_management_petty_cash_main_menu' action = 'cash_management_petty_cash_types_action' sequence = "20"/>
 
     <!--Staff Advance Types-->
     <record model = 'ir.actions.act_window' id = 'cash_management_staff_advance_types_action'>

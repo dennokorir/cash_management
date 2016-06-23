@@ -13,6 +13,18 @@
         <field name = "padding">4</field>
     </record>
 
+<!--Petty Cash Voucher Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_petty_cash_voucher_id'>
+        <field name = "name">Petty Cash Voucher Numbers</field>
+        <field name = "code">petty.cash.voucher</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_petty_cash_voucher_id">
+        <field name = "name">Petty Cash Voucher Numbers</field>
+        <field name = "code">petty.cash.voucher</field>
+        <field name = "prefix">PTYCASH</field>
+        <field name = "padding">4</field>
+    </record>
+
     <!--Payment Voucher Numbers-->
     <record model = 'ir.sequence.type' id = 'seq_type_payment_voucher_id'>
         <field name = "name">Payment Voucher Numbers</field>

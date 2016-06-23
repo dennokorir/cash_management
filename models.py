@@ -16,7 +16,7 @@ class payment_header(models.Model):
     payment_narration = fields.Text()
     cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
     state = fields.Selection([('open',"Open"),('pending',"Pending Approval"),('approved',"Approved")], default = 'open')
-    posted = fields.Boolean()
+    posted = fields.Boolean(default = False)
     gross_amount = fields.Float()
     tax_amount = fields.Float()
     total_amount = fields.Float(compute = 'calculate_amounts')
@@ -53,7 +53,7 @@ class payment_header(models.Model):
 
         journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
         #period
-        period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
@@ -91,6 +91,99 @@ class payment_details(models.Model):
     def get_accounts(self):
         payment_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.payment_type.id)])
         self.account_name = payment_type.account_name
+        self.description = payment_type.description
+
+class petty_cash_header(models.Model):
+    _name = 'cash.management.petty.cash.header'
+
+    name = fields.Char(string = "No.")
+    date = fields.Date()
+    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")], default = 'cash')
+    cheque_no = fields.Char()
+    paying_bank = fields.Many2one('res.bank')
+    paying_account_no = fields.Char()
+    payment_to = fields.Char()
+    on_behalf_of = fields.Char()
+    payment_narration = fields.Text()
+    cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
+    state = fields.Selection([('open',"Open"),('pending',"Pending Approval"),('approved',"Approved")], default = 'open')
+    posted = fields.Boolean(default = False)
+    gross_amount = fields.Float()
+    tax_amount = fields.Float()
+    total_amount = fields.Float(compute = 'calculate_amounts')
+    line_ids = fields.One2many('cash.management.petty.cash.lines','header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
+
+    @api.one
+    @api.onchange('name')
+    def get_sequence(self):
+        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+        sequence = self.env['ir.sequence'].search([('id','=',setup.petty_cash_voucher_numbers.id)])
+        self.name = sequence.next_by_id(sequence.id, context = None)
+
+    @api.onchange('paying_bank')
+    def get_account(self):
+        bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
+        self.paying_account_no = bank.acc_number
+
+    @api.one
+    @api.depends('line_ids')
+    def calculate_amounts(self):
+        self.gross_amount = sum(line.amount for line in self.line_ids)
+        self.total_amount = sum(line.amount for line in self.line_ids)
+
+    @api.one
+    def action_post(self):
+        #date
+        today = datetime.now().strftime("%Y/%m/%d")
+        #create journal header
+        paying_bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
+
+        journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
+        #period
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
+        period_id = period.id
+
+        journal_header = self.env['account.move']#reference to journal entry
+        move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
+            'date':today})
+        move_id = move.id
+
+        #create journal lines
+        journal_lines = self.env['account.move.line']
+
+        #dr = receiving_bank.journal_id.default_debit_account_id.id
+        cr = paying_bank.journal_id.default_credit_account_id.id
+
+        for line in self.line_ids:
+            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount})
+            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount})
+
+        self.posted = True
+
+
+
+class petty_cash_details(models.Model):
+    _name = 'cash.management.petty.cash.lines'
+
+    header_id = fields.Many2one('cash.management.petty.cash.header')
+    payment_type = fields.Many2one('cash.management.receipts.and.payment.types', domain = [('transaction_type','=','petty')])
+    account_no = fields.Char()
+    account_name = fields.Many2one('account.account')
+    description = fields.Char()
+    tax = fields.Char()#consider using many2many field
+    tax_amount = fields.Float()
+    amount = fields.Float()
+
+    @api.onchange('payment_type')
+    def get_accounts(self):
+        payment_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.payment_type.id)])
+        self.account_name = payment_type.account_name
+        self.description = payment_type.description
+
 
 class receipt_header(models.Model):
     _name = 'cash.management.receipt.header'
@@ -101,12 +194,12 @@ class receipt_header(models.Model):
     receiving_account_no = fields.Char()
     received_from = fields.Char()
     cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
-    posted = fields.Boolean()
+    posted = fields.Boolean(default = False)
     remarks = fields.Text()
     gross_amount = fields.Float()
     tax_amount = fields.Float()
-    total_amount = fields.Float()
-    state = fields.Selection([('draft',"Draft"),('received',"Recieved")])
+    total_amount = fields.Float(compute = 'sum_totals')
+    state = fields.Selection([('draft',"Draft"),('received',"Recieved")], default = 'draft')
     line_ids = fields.One2many('cash.management.receipt.lines','header_id')
     dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
     dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
@@ -134,7 +227,7 @@ class receipt_header(models.Model):
 
         journal = self.env['account.journal'].search([('id','=',receiving_bank.journal_id.id)]) #get journal id
         #period
-        period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
@@ -154,6 +247,11 @@ class receipt_header(models.Model):
 
         self.posted = True
 
+    @api.one
+    @api.depends('line_ids')
+    def sum_totals(self):
+        self.total_amount = sum(line.amount for line in self.line_ids)
+
 
 class receipt_details(models.Model):
     _name = 'cash.management.receipt.lines'
@@ -169,6 +267,7 @@ class receipt_details(models.Model):
     def get_accounts(self):
         receipt_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.receipt_type.id)])
         self.account_name = receipt_type.account_name
+        self.description = receipt_type.description
 
 class bank_transfer_header(models.Model):
     _name = 'cash.management.bank.transfer.header'
@@ -222,7 +321,7 @@ class bank_transfer_header(models.Model):
             #period
             #month = datetime.strptime(str(today),'%Y-%m-%d').date().month
             #year = datetime.strptime(str(today),'%Y-%m-%d').date().year
-            period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+            period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
             period_id = period.id
 
             journal_header = self.env['account.move']#reference to journal entry
@@ -308,7 +407,7 @@ class staff_advance_header(models.Model):
 
         journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
         #period
-        period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
@@ -345,6 +444,7 @@ class staff_advance_lines(models.Model):
     def get_accounts(self):
         advance_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.advance_type.id)])
         self.account_name = advance_type.account_name
+        self.description = advance_type.description
 
 class staff_advance_surrender_header(models.Model):
     _name = 'cash.management.staff.advance.surrender.header'
@@ -412,7 +512,7 @@ class staff_advance_surrender_header(models.Model):
 
         journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
         #period
-        period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
@@ -513,7 +613,7 @@ class travel_advance_header(models.Model):
 
         journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
         #period
-        period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
@@ -552,6 +652,7 @@ class travel_advance_lines(models.Model):
     def get_accounts(self):
         advance_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.advance_type.id)])
         self.account_name = advance_type.account_name
+        self.description = advance_type.description
 
 class travel_advance_surrender_header(models.Model):
     _name = 'cash.management.travel.advance.surrender.header'
@@ -613,7 +714,7 @@ class travel_advance_surrender_header(models.Model):
 
         journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
         #period
-        period = self.env['account.period'].search([('state','=','draft'),('date_start','<',today),('date_stop','>',today)])
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
@@ -666,7 +767,7 @@ class receipt_payment_types(models.Model):
     _name = 'cash.management.receipts.and.payment.types'
 
     name = fields.Char()
-    transaction_type = fields.Selection([('receipt',"Receipt"),('payment',"Payment"),('staff',"Staff Advance"),('travel',"Travel Advance")])
+    transaction_type = fields.Selection([('receipt',"Receipt"),('payment',"Payment"),('staff',"Staff Advance"),('travel',"Travel Advance"),('petty',"Petty Cash")])
     description = fields.Char()
     account_no = fields.Char()
     account_name = fields.Many2one('account.account')
@@ -684,6 +785,7 @@ class setup(models.Model):
     _name = 'cash.management.general.setup'
 
     name = fields.Char()
+    petty_cash_voucher_numbers = fields.Many2one('ir.sequence')
     payment_voucher_numbers = fields.Many2one('ir.sequence')
     receipt_numbers = fields.Many2one('ir.sequence')
     bank_transfer_numbers = fields.Many2one('ir.sequence')
