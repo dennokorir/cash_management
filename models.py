@@ -106,7 +106,7 @@ class petty_cash_header(models.Model):
     on_behalf_of = fields.Char()
     payment_narration = fields.Text()
     cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
-    state = fields.Selection([('open',"Open"),('pending',"Pending Approval"),('approved',"Approved")], default = 'open')
+    state = fields.Selection([('draft',"draft"),('pending',"Pending Approval"),('approved',"Approved")], default = 'draft')
     posted = fields.Boolean(default = False)
     gross_amount = fields.Float()
     tax_amount = fields.Float()
@@ -163,7 +163,18 @@ class petty_cash_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount})
 
         self.posted = True
+        self.state = 'approved'
 
+    @api.one
+    def request(self):
+        self.state = 'pending'
+        #requests = self.env['cash.management.petty.cash.header'].search([('state','=','draft')])
+        return {'type':'ir.actions.act_window',
+        'res_model':'cash.management.petty.cash.header',
+        'view_type':'form',
+        'view_mode':'tree',
+        'target':'new',
+        }
 
 
 class petty_cash_details(models.Model):
@@ -780,6 +791,35 @@ class travel_destinations(models.Model):
     name = fields.Char()
     country = fields.Many2one('res.country')
 
+class store_requisition(models.Model):
+    _name = 'cash.management.store.requisition.header'
+
+    name = fields.Char()
+    request_date = fields.Date(string = 'Request Date', default = fields.Date.today)
+    required_date = fields.Date(string = 'Required Date')
+    request_description = fields.Text()
+    issuing_store = fields.Char()
+    requested_by = fields.Many2one('res.users', default = lambda self:self.env.user)
+    state = fields.Selection([('draft','Draft'),('pending',"Pending Approval"),('issued',"Issued")], default = 'draft')
+    line_ids = fields.One2many('cash.management.store.requisition.lines','header_id')
+
+    @api.one
+    @api.onchange('name')
+    def get_sequence(self):
+        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+        sequence = self.env['ir.sequence'].search([('id','=',setup.store_requisition_numbers.id)])
+        self.name = sequence.next_by_id(sequence.id, context = None)
+
+class store_requisition_lines(models.Model):
+    _name = 'cash.management.store.requisition.lines'
+
+    header_id = fields.Many2one('cash.management.store.requisition.header')
+    item = fields.Many2one('product.product')
+    quantity_available = fields.Float()
+    quantity_requested = fields.Float()
+    unit_of_measure = fields.Char()
+    unit_cost = fields.Float()
+    total_cost = fields.Float()
 
 class setup(models.Model):
     _name = 'cash.management.general.setup'
@@ -793,5 +833,6 @@ class setup(models.Model):
     staff_advance_surrender_numbers = fields.Many2one('ir.sequence')
     travel_advance_numbers = fields.Many2one('ir.sequence')
     travel_advance_surrender_numbers = fields.Many2one('ir.sequence')
+    store_requisition_numbers = fields.Many2one('ir.sequence')
     staff_advance_receivable_account = fields.Many2one('account.account')
     staff_travel_receivable_account = fields.Many2one('account.account')

@@ -190,7 +190,9 @@
       <field name = 'arch' type = 'xml'>
         <form>
         <header>
-          <button name="action_post" type = "object" string = "Post Payments"  confirm = "Post Payments?" class="oe_highlight" attrs="{'invisible': [('posted', '=', '1')]}"/>
+          <button name="action_post" type = "object" string = "Approve"  confirm = "Post Payments?" class="oe_highlight" attrs="{'invisible': ['|',('posted', '=', '1'),('state','=','draft')]}"/>
+          <button name = 'request' type = 'object' string = 'Send Request' class = 'oe_highlight'
+            attrs="{'invisible': ['|',('posted', '=', '1'),('state','=','pending')]}"/>
           <field name = 'state' widget = 'statusbar'/>
         </header>
           <sheet>
@@ -531,6 +533,7 @@
                     <field name = 'staff_advance_surrender_numbers'/>
                     <field name = 'travel_advance_numbers'/>
                     <field name = 'travel_advance_surrender_numbers'/>
+                    <field name = 'store_requisition_numbers'/>
                   </group>
                 </page>
               </notebook>
@@ -589,6 +592,62 @@
         <tree editable = 'bottom'>
           <field name = 'name'/>
           <field name = 'country'/>
+        </tree>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_store_requisition_form'>
+      <field name = 'name'>Store Requisition</field>
+      <field name = 'model'>cash.management.store.requisition.header</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+          <sheet>
+            <header>
+              <field name = 'state' widget = 'statusbar'/>
+            </header>
+            <group>
+              <group>
+                <field name = 'name'/>
+                <field name = 'request_date'/>
+                <field name = 'required_date'/>
+                <field name = 'requested_by'/>
+                <field name = 'issuing_store'/>
+
+              </group>
+              <group>
+                <field name = 'request_description'/>
+              </group>
+            </group>
+            <notebook>
+              <page string = 'Details'>
+                <field name = 'line_ids'>
+                  <tree editable = 'bottom'>
+                    <field name = 'item'/>
+                    <field name = 'quantity_available'/>
+                    <field name = 'quantity_requested'/>
+                    <field name = 'unit_of_measure'/>
+                    <field name = 'unit_cost'/>
+                    <field name = 'total_cost'/>
+                  </tree>
+                </field>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_store_requisition_tree'>
+      <field name = 'name'>Store Requisition</field>
+      <field name = 'model'>cash.management.store.requisition.header</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'requested_by'/>
+          <field name = 'request_date'/>
+          <field name = 'required_date'/>
+          <field name = 'issuing_store'/>
+          <field name = 'state'/>
         </tree>
       </field>
     </record>
@@ -672,11 +731,11 @@
     <menuitem name = 'History' id = 'cash_management_payments_history_main_menu' parent = 'cash_management_payments_main_menu' sequence = "90"/>
     <menuitem name = 'Posted Payments' id = 'cash_management_payments_list_history' parent = 'cash_management_payments_history_main_menu' action = "cash_management_payments_history_action" sequence = "10"/>
 
-    <!--Petty Cash-->
+    <!--Petty Cash Request-->
     <record model = 'ir.actions.act_window' id = 'cash_management_petty_cash_action'>
       <field name = 'name'>Petty Cash</field>
       <field name = 'res_model'>cash.management.petty.cash.header</field>
-      <field name = "domain">[('posted','=',0)]</field>
+      <field name = "domain">[('posted','=',0),('state','=','draft')]</field>
       <field name = "filter" eval = "True"/>
       <field name = 'view_type'>form</field>
       <field name = 'view_mode'>tree,form</field>
@@ -684,6 +743,18 @@
 
     <menuitem name = 'Petty Cash' id = 'cash_management_petty_cash_main_menu' parent = 'cash_management_main_menu' sequence = "25"/>
     <menuitem name = 'Petty Cash Requisitions' id = 'cash_management_petty_cash_list' parent = 'cash_management_petty_cash_main_menu' action = "cash_management_petty_cash_action" sequence = "10"/>
+
+<!--Petty Cash Approvals-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_petty_cash_approvals_action'>
+      <field name = 'name'>Petty Cash</field>
+      <field name = 'res_model'>cash.management.petty.cash.header</field>
+      <field name = "domain">[('posted','=',0),('state','=','pending')]</field>
+      <field name = "filter" eval = "True"/>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Petty Cash Approvals' id = 'cash_management_petty_cash_approvals_list' parent = 'cash_management_petty_cash_main_menu' action = "cash_management_petty_cash_approvals_action" sequence = "15"/>
 
     <!--Posted Petty Cash-->
     <record model = 'ir.actions.act_window' id = 'cash_management_petty_cash_history_action'>
@@ -819,6 +890,16 @@
     </record>
 
     <menuitem name = 'Travel Destinations' id = 'cash_management_travel_destinations' parent = 'cash_management_staff_travel_main_menu' action = 'cash_management_travel_destinations_action' sequence = "30"/>
+
+    <record model = 'ir.actions.act_window' id = 'cash_management_store_requisition_action'>
+      <field name = 'name'>Store Requisition</field>
+      <field name = 'res_model'>cash.management.store.requisition.header</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Stores' id = 'cash_management_stores_main_menu' parent = 'cash_management_main_menu' sequence = "80"/>
+    <menuitem name = 'Store Requisitions' id = 'cash_management_store_requsition' parent = 'cash_management_stores_main_menu' action = 'cash_management_store_requisition_action' sequence = '10'/>
 
   </data>
 </openerp>

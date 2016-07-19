@@ -97,5 +97,17 @@
         <field name = "padding">4</field>
     </record>
 
+    <!--Travel Advance Surrender Numbers-->
+    <record model = 'ir.sequence.type' id = 'seq_type_store_requisition_id'>
+        <field name = "name">Store Requisition Numbers</field>
+        <field name = "code">store.requisition</field>
+    </record>
+    <record model = "ir.sequence" id = "seq_store_requisition_surrender_id">
+        <field name = "name">Store Requisition Numbers</field>
+        <field name = "code">store.requisition</field>
+        <field name = "prefix">S-REQ</field>
+        <field name = "padding">4</field>
+    </record>
+
  </data>
 </openerp>
