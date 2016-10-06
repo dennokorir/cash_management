@@ -10,6 +10,7 @@ class payment_header(models.Model):
     payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")], default = 'cash')
     cheque_no = fields.Char()
     paying_bank = fields.Many2one('res.bank')
+    partner = fields.Many2one('res.partner', default = None)#this is necessary for automated payments from other documents
     paying_account_no = fields.Char()
     payment_to = fields.Char()
     on_behalf_of = fields.Char()
@@ -21,6 +22,7 @@ class payment_header(models.Model):
     tax_amount = fields.Float()
     total_amount = fields.Float(compute = 'calculate_amounts')
     line_ids = fields.One2many('cash.management.payment.lines','header_id')
+    claim_id = fields.Many2one('cash.management.staff.claim')
     dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
     dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
     dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
@@ -68,9 +70,10 @@ class payment_header(models.Model):
         cr = paying_bank.journal_id.default_credit_account_id.id
 
         for line in self.line_ids:
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Payments::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount})
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Payments::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount})
+            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Payments::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount,'partner_id':self.partner.id})
+            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Payments::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount,'partner_id':self.partner.id})
 
+        move.post()
         self.posted = True
 
 
@@ -162,6 +165,7 @@ class petty_cash_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount})
 
+        move.post()
         self.posted = True
         self.state = 'approved'
 
@@ -256,6 +260,7 @@ class receipt_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Cash/Bank Receipts::' + self.name,'account_id':dr,'move_id':move_id,'debit':line.amount})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Cash/Bank Receipts::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'credit':line.amount})
 
+        move.post()
         self.posted = True
 
     @api.one
@@ -353,6 +358,7 @@ class bank_transfer_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Bank Transfer','account_id':dr,'move_id':move_id,'debit':self.amount})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Bank Transfer','account_id':cr,'move_id':move_id,'credit':self.amount})
 
+            move.post()
             self.posted = True
         else:
             raise ValidationError("Your transfer exceeds the Bank Balance")
@@ -439,6 +445,7 @@ class staff_advance_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance::' + self.name,'account_id':dr,'move_id':move_id,'debit':line.amount,'partner_id':self.advance_to.id})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount,'partner_id':self.advance_to.id})
 
+        move.post()
         self.posted = True
 
 class staff_advance_lines(models.Model):
@@ -545,6 +552,7 @@ class staff_advance_surrender_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance Surrender::' + self.name,'account_id':dr,'move_id':move_id,'debit':line.actual_spent,'partner_id':self.surrendered_by.id})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance Surrender::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.actual_spent,'partner_id':self.surrendered_by.id})
 
+        move.post()
         self.posted = True
         self.source_document.surrendered = True
 
@@ -645,6 +653,7 @@ class travel_advance_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance::' + self.name,'account_id':dr,'move_id':move_id,'debit':line.amount,'partner_id':self.advance_to.id})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount,'partner_id':self.advance_to.id})
 
+        move.post()
         self.posted = True
 
 class travel_advance_lines(models.Model):
@@ -747,6 +756,7 @@ class travel_advance_surrender_header(models.Model):
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance Surrender::' + self.name,'account_id':dr,'move_id':move_id,'debit':line.actual_spent,'partner_id':self.surrendered_by.id})
             journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Advance Surrender::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.actual_spent,'partner_id':self.surrendered_by.id})
 
+        move.post()
         self.posted = True
         self.source_document.surrendered = True
 
@@ -774,11 +784,116 @@ class travel_advance_surrender_lines(models.Model):
     def get_balance(self):
         self.balance = self.amount_advanced - self.actual_spent
 
+class staff_claim(models.Model):
+    _name = 'cash.management.staff.claim'
+
+    name = fields.Char(string = 'No.')
+    date = fields.Date(default = fields.Date.today)
+    claim_by = fields.Many2one('res.partner')
+    purpose = fields.Text()
+    paying_bank = fields.Many2one('res.bank')
+    paying_account_name = fields.Char()
+    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")])
+    cheque_no = fields.Char()
+    total_amount = fields.Float(compute = 'compute_totals')
+    paid = fields.Float(compute = 'compute_payments')
+    balance = fields.Float(compute = 'compute_payments')
+    payment_ids = fields.One2many('cash.management.payment.header', 'claim_id', editable = False)
+    state = fields.Selection([('draft',"Draft"),('open',"Open"),('claimed',"Claimed")], default = 'draft')
+    cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
+    posted = fields.Boolean()
+    line_ids = fields.One2many('cash.management.staff.claim.lines', 'header_id')
+    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
+    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
+    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
+    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
+
+    @api.one
+    @api.onchange('name')
+    def get_sequence(self):
+        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+        sequence = self.env['ir.sequence'].search([('id','=',setup.staff_claim_numbers.id)])
+        self.name = sequence.next_by_id(sequence.id, context = None)
+
+    #@api.one
+    #def confirm(self):
+        #self.state = 'ready'
+
+    @api.one
+    def reset(self):
+        self.state = 'draft'
+
+    @api.one
+    @api.depends('line_ids')
+    def compute_totals(self):
+        self.total_amount = sum(line.amount for line in self.line_ids)
+
+    @api.one
+    def action_post(self):
+        #date
+        today = datetime.now().strftime("%Y/%m/%d")
+
+        #setup
+        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+
+        #create journal header
+        journal = self.env['account.journal'].search([('id','=',setup.miscellaneous_journal.id)]) #get journal id
+        #period
+        period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
+        period_id = period.id
+
+        journal_header = self.env['account.move']#reference to journal entry
+        move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
+            'date':today})
+        move_id = move.id
+
+        #create journal lines
+        journal_lines = self.env['account.move.line']
+        #dr =
+        cr = setup.staff_claims_payable_account.id
+
+        for line in self.line_ids:
+            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Claim::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount,'partner_id':self.claim_by.id})
+            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Claim::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount,'partner_id':self.claim_by.id})
+
+        move.post()
+        self.posted = True
+        self.state = 'open'
+
+    @api.one
+    @api.depends('payment_ids')
+    def compute_payments(self):
+        self.paid = sum(payment.total_amount for payment in self.payment_ids)
+        if self.paid < self.total_amount:
+            self.balance = self.total_amount - self.paid
+        else:
+            self.balance = 0
+
+    @api.onchange('balance', 'posted')
+    def check_state(self):
+        if self.posted and self.balance == 0:
+            self.state = 'claimed'
+
+class staff_claim_lines(models.Model):
+    _name = 'cash.management.staff.claim.lines'
+
+    header_id = fields.Many2one('cash.management.staff.claim')
+    claim_type = fields.Many2one('cash.management.receipts.and.payment.types', domain = [('transaction_type','=','claim')])
+    account_name = fields.Many2one('account.account')
+    description = fields.Char()
+    amount = fields.Float()
+
+    @api.onchange('claim_type')
+    def get_accounts(self):
+        claim_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.claim_type.id)])
+        self.account_name = claim_type.account_name.id
+        self.description = claim_type.description
+
 class receipt_payment_types(models.Model):
     _name = 'cash.management.receipts.and.payment.types'
 
     name = fields.Char()
-    transaction_type = fields.Selection([('receipt',"Receipt"),('payment',"Payment"),('staff',"Staff Advance"),('travel',"Travel Advance"),('petty',"Petty Cash")])
+    transaction_type = fields.Selection([('receipt',"Receipt"),('payment',"Payment"),('staff',"Staff Advance"),('travel',"Travel Advance"),('petty',"Petty Cash"),('claim',"Claim")])
     description = fields.Char()
     account_no = fields.Char()
     account_name = fields.Many2one('account.account')
@@ -834,5 +949,8 @@ class setup(models.Model):
     travel_advance_numbers = fields.Many2one('ir.sequence')
     travel_advance_surrender_numbers = fields.Many2one('ir.sequence')
     store_requisition_numbers = fields.Many2one('ir.sequence')
+    staff_claim_numbers = fields.Many2one('ir.sequence')
     staff_advance_receivable_account = fields.Many2one('account.account')
     staff_travel_receivable_account = fields.Many2one('account.account')
+    staff_claims_payable_account = fields.Many2one('account.account')
+    miscellaneous_journal = fields.Many2one('account.journal')

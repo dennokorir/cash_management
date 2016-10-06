@@ -88,7 +88,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Receipt Details'>
               <field name = 'line_ids'>
                 <tree editable = 'bottom'>
                   <field name = 'receipt_type'/>
@@ -139,6 +139,7 @@
               <field name = 'paying_account_no'/>
               <field name = 'payment_method'/>
               <field name = 'cheque_no' attrs="{'invisible': [('payment_method', '!=', 'cheque')]}"/>
+              <field name = 'partner'/>
               <field name = 'payment_to'/>
               <field name = 'on_behalf_of'/>
               <field name = 'cashier'/>
@@ -150,7 +151,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Payment Details'>
               <field name = 'line_ids'>
                 <tree editable = 'bottom'>
                   <field name = 'payment_type'/>
@@ -215,7 +216,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Payment Details'>
               <field name = 'line_ids'>
                 <tree editable = 'bottom'>
                   <field name = 'payment_type'/>
@@ -279,7 +280,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Advance Details'>
               <field name = 'line_ids'>
                 <tree editable = 'bottom'>
                   <field name = 'advance_type'/>
@@ -339,7 +340,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Surrender Details'>
               <field name = 'line_ids'>
                 <tree editable = "bottom">
                   <field name = 'advance_type'/>
@@ -404,7 +405,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Advance Details'>
               <field name = 'line_ids'>
                 <tree editable = 'bottom'>
                   <field name = 'advance_type'/>
@@ -466,7 +467,7 @@
             </group>
           </group>
           <notebook>
-            <page>
+            <page string = 'Surrender Details'>
               <field name = 'line_ids'>
                 <tree editable = 'bottom'>
                   <field name = 'advance_type'/>
@@ -516,6 +517,8 @@
                     <group>
                       <field name = 'staff_advance_receivable_account'/>
                       <field name = 'staff_travel_receivable_account'/>
+                      <field name = 'staff_claims_payable_account'/>
+                      <field name = 'miscellaneous_journal'/>
                     </group>
                     <group>
 
@@ -531,6 +534,7 @@
                     <field name = 'bank_transfer_numbers'/>
                     <field name = 'staff_advance_numbers'/>
                     <field name = 'staff_advance_surrender_numbers'/>
+                    <field name = 'staff_claim_numbers'/>
                     <field name = 'travel_advance_numbers'/>
                     <field name = 'travel_advance_surrender_numbers'/>
                     <field name = 'store_requisition_numbers'/>
@@ -648,6 +652,67 @@
           <field name = 'required_date'/>
           <field name = 'issuing_store'/>
           <field name = 'state'/>
+        </tree>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_staff_claim_form'>
+      <field name = 'name'>Staff Claim</field>
+      <field name = 'model'>cash.management.staff.claim</field>
+      <field name = 'arch' type = 'xml'>
+        <form>
+          <header>
+            <button name="action_post" type = "object" string = "Post"  confirm = "Post Claim?" attrs="{'invisible': [('state', '!=', 'draft')]}" class="oe_highlight"/>
+            <button name="%(launch_staff_claim_payment_wizard)d" type = "action" string = "Pay" attrs="{'invisible': [('state', '!=', 'open')]}" class = 'oe_highlight' context="{'default_name':claim_by, 'default_payment_reference':name, 'default_amount':balance, 'default_claim':id}" />
+            <field name = 'state' widget = 'statusbar'/>
+          </header>
+          <sheet>
+            <group>
+              <group>
+                <field name = 'name'/>
+                <field name = 'date'/>
+                <field name = 'claim_by'/>
+                <field name = 'cashier'/>
+              </group>
+              <group>
+                <field name = 'purpose'/>
+                <field name = 'posted'/>
+                <field name = 'total_amount'/>
+                <field name = 'paid'/>
+                <field name = 'balance'/>
+              </group>
+            </group>
+            <notebook>
+              <page string = 'Claim Details'>
+                <field name = 'line_ids'>
+                  <tree editable = 'bottom'>
+                    <field name = 'claim_type'/>
+                    <field name = 'account_name'/>
+                    <field name = 'description'/>
+                    <field name = 'amount'/>
+                  </tree>
+                </field>
+              </page>
+              <page string = 'Payments'>
+                <label for = 'payment_ids'/>
+                <field name = 'payment_ids'/>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model = 'ir.ui.view' id = 'cash_management_staff_claim_tree'>
+      <field name = 'name'>Staff Claim</field>
+      <field name = 'model'>cash.management.staff.claim</field>
+      <field name = 'arch' type = 'xml'>
+        <tree>
+          <field name = 'name'/>
+          <field name = 'date'/>
+          <field name = 'claim_by'/>
+          <field name = 'state'/>
+          <field name = 'total_amount' sum = 'total_amount'/>
         </tree>
       </field>
     </record>
@@ -880,6 +945,7 @@
 
     <menuitem name = 'Travel Advance Types' id = 'cash_management_travel_advance_types' parent = 'cash_management_staff_travel_main_menu' action = 'cash_management_travel_advance_types_action' sequence = "20"/>
 
+
     <!--Travel Destinations-->
     <record model = 'ir.actions.act_window' id = 'cash_management_travel_destinations_action'>
       <field name = 'name'>Travel Destinations</field>
@@ -890,7 +956,7 @@
     </record>
 
     <menuitem name = 'Travel Destinations' id = 'cash_management_travel_destinations' parent = 'cash_management_staff_travel_main_menu' action = 'cash_management_travel_destinations_action' sequence = "30"/>
-
+    <!--Store Requisition-->
     <record model = 'ir.actions.act_window' id = 'cash_management_store_requisition_action'>
       <field name = 'name'>Store Requisition</field>
       <field name = 'res_model'>cash.management.store.requisition.header</field>
@@ -900,6 +966,28 @@
 
     <menuitem name = 'Stores' id = 'cash_management_stores_main_menu' parent = 'cash_management_main_menu' sequence = "80"/>
     <menuitem name = 'Store Requisitions' id = 'cash_management_store_requsition' parent = 'cash_management_stores_main_menu' action = 'cash_management_store_requisition_action' sequence = '10'/>
+
+    <!--Staff Claims-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_staff_claims_action'>
+      <field name = 'name'>Staff Claims</field>
+      <field name = 'res_model'>cash.management.staff.claim</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+    </record>
+
+    <menuitem name = 'Claims and Refunds' id = 'cash_management_staff_claims_main_menu' parent = 'cash_management_main_menu' sequence = "45"/>
+    <menuitem name = 'Staff Claims' id = 'cash_management_staff_claims' parent = 'cash_management_staff_claims_main_menu' action = 'cash_management_staff_claims_action' sequence = '10'/>
+
+    <!--Staff Claim Types-->
+    <record model = 'ir.actions.act_window' id = 'cash_management_staff_claim_types_action'>
+      <field name = 'name'>Staff Claim Types</field>
+      <field name = 'res_model'>cash.management.receipts.and.payment.types</field>
+      <field name = 'view_type'>form</field>
+      <field name = 'view_mode'>tree,form</field>
+      <field name = 'context'>{'search_default_transaction_type':'claim', 'default_transaction_type':'claim'}</field>
+    </record>
+
+    <menuitem name = 'Staff Claim Types' id = 'cash_management_staff_claim_types' parent = 'cash_management_staff_claims_main_menu' action = 'cash_management_staff_claim_types_action' sequence = "20"/>
 
   </data>
 </openerp>
