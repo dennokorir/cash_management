@@ -6,39 +6,35 @@ class payment_header(models.Model):
     _name = 'cash.management.payment.header'
 
     name = fields.Char(string = "No.")
-    date = fields.Date()
-    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")], default = 'cash')
-    cheque_no = fields.Char()
-    paying_bank = fields.Many2one('res.bank')
-    partner = fields.Many2one('res.partner', default = None)#this is necessary for automated payments from other documents
-    paying_account_no = fields.Char()
-    payment_to = fields.Char()
-    on_behalf_of = fields.Char()
-    payment_narration = fields.Text()
-    cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
-    state = fields.Selection([('open',"Open"),('pending',"Pending Approval"),('approved',"Approved")], default = 'open')
-    posted = fields.Boolean(default = False)
+    date = fields.Date(readonly=True, states={'draft': [('readonly', False)]})
+    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")], default = 'cash', readonly=True, states={'draft': [('readonly', False)]})
+    cheque_no = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    paying_bank = fields.Many2one('res.bank', readonly=True, states={'draft': [('readonly', False)]})
+    partner = fields.Many2one('res.partner', default = None, readonly=True, states={'draft': [('readonly', False)]})#this is necessary for automated payments from other documents
+    payment_to = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    payment_narration = fields.Text(readonly=True, states={'draft': [('readonly', False)]})
+    cashier = fields.Many2one('res.users', default = lambda self:self.env.user, readonly=True, states={'draft': [('readonly', False)]})
+    state = fields.Selection([('draft',"Draft"),('complete',"complete")], default = 'draft')
     gross_amount = fields.Float()
     tax_amount = fields.Float()
     total_amount = fields.Float(compute = 'calculate_amounts')
-    line_ids = fields.One2many('cash.management.payment.lines','header_id')
-    claim_id = fields.Many2one('cash.management.staff.claim')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
+    line_ids = fields.One2many('cash.management.payment.lines','header_id', readonly=True, states={'draft': [('readonly', False)]})
+    claim_id = fields.Many2one('cash.management.staff.claim', readonly=True, states={'draft': [('readonly', False)]})
+    
+    @api.one
+    def get_sequence(self):
+        if self.name == False:
+            setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+            sequence = self.env['ir.sequence'].search([('id','=',setup.payment_voucher_numbers.id)])
+            self.name = sequence.next_by_id(sequence.id, context = None)
 
     @api.one
-    @api.onchange('name')
-    def get_sequence(self):
-        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
-        sequence = self.env['ir.sequence'].search([('id','=',setup.payment_voucher_numbers.id)])
-        self.name = sequence.next_by_id(sequence.id, context = None)
+    def mark_as_draft(self):
+        self.state = 'draft'
 
-    @api.onchange('paying_bank')
-    def get_account(self):
-        bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
-        self.paying_account_no = bank.acc_number
+    @api.one
+    def mark_as_complete(self):
+        self.state = 'complete'
 
     @api.one
     @api.depends('line_ids')
@@ -49,7 +45,10 @@ class payment_header(models.Model):
     @api.one
     def action_post(self):
         #date
-        today = datetime.now().strftime("%Y/%m/%d")
+        if self.date != False:
+            today = self.date
+        else:
+            today = datetime.now().strftime("%Y/%m/%d")
         #create journal header
         paying_bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
 
@@ -59,22 +58,55 @@ class payment_header(models.Model):
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
-        move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
-            'date':today})
-        move_id = move.id
-
-        #create journal lines
-        journal_lines = self.env['account.move.line']
-
-        #dr = receiving_bank.journal_id.default_debit_account_id.id
+        
         cr = paying_bank.journal_id.default_credit_account_id.id
 
+        move_line_vals = []
+        
+        #post bank entry
+        move_line_vals.append((0, 0,{
+            'journal_id':journal.id,
+            'period_id':period_id,
+            'date':today,
+            'name':'Payments::' + self.name,
+            'account_id':cr,
+            'debit':0,
+            'credit':self.total_amount,
+            'partner_id':self.partner.id
+            }))
+        
+        # post lines
         for line in self.line_ids:
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Payments::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount,'partner_id':self.partner.id})
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Payments::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount,'partner_id':self.partner.id})
+            move_line_vals.append((0, 0,{
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'date':today,
+                'name':line.description +'::' + self.name,
+                'account_id':line.account_id.id,
+                'debit':line.amount,
+                'credit':0,
+                'partner_id':self.partner.id
+                }))
+
+        move = journal_header.create({
+            'journal_id':journal.id,
+            'period_id':period_id,
+            'state':'draft',
+            'name':self.name,
+            'date':today,
+            'line_id': move_line_vals
+            })
 
         move.post()
-        self.posted = True
+
+    @api.one
+    def update_lines_with_dates(self):
+        payments = self.env['cash.management.payment.header'].search([])
+        for payment in payments:
+            lines = self.env['cash.management.payment.lines'].search([('header_id','=',payment.id)])
+            if len(lines)>0:
+                for line in lines:
+                    line.date = payment.date
 
 
 
@@ -84,53 +116,51 @@ class payment_details(models.Model):
     header_id = fields.Many2one('cash.management.payment.header')
     payment_type = fields.Many2one('cash.management.receipts.and.payment.types', domain = [('transaction_type','=','payment')])
     account_no = fields.Char()
-    account_name = fields.Many2one('account.account')
+    account_id = fields.Many2one('account.account')
     description = fields.Char()
-    tax = fields.Char()#consider using many2many field
+    # tax = fields.Char()#consider using many2many field
     tax_amount = fields.Float()
     amount = fields.Float()
+    date = fields.Date()
 
     @api.onchange('payment_type')
     def get_accounts(self):
         payment_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.payment_type.id)])
-        self.account_name = payment_type.account_name
+        self.account_id = payment_type.account_id.id
         self.description = payment_type.description
+        self.date = self.header_id.date
 
-class petty_cash_header(models.Model):
-    _name = 'cash.management.petty.cash.header'
 
-    name = fields.Char(string = "No.")
-    date = fields.Date()
-    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")], default = 'cash')
-    cheque_no = fields.Char()
-    paying_bank = fields.Many2one('res.bank')
-    paying_account_no = fields.Char()
-    payment_to = fields.Char()
-    on_behalf_of = fields.Char()
-    payment_narration = fields.Text()
-    cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
-    state = fields.Selection([('draft',"draft"),('pending',"Pending Approval"),('approved',"Approved")], default = 'draft')
-    posted = fields.Boolean(default = False)
+
+class PettyCash(models.Model):
+    _name = 'cash.management.petty.cash.header' 
+
+    name = fields.Char(string = "No.", readonly=True, states={'draft': [('readonly', False)]})
+    date = fields.Date(readonly=True, states={'draft': [('readonly', False)]})
+    payment_method = fields.Selection([
+        ('cash',"Cash"),
+        ('cheque',"Cheque")], 
+        default = 'cash', readonly=True, states={'draft': [('readonly', False)]})
+    cheque_no = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    paying_bank = fields.Many2one('res.bank', readonly=True, states={'draft': [('readonly', False)]})
+    payment_to = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    payment_narration = fields.Text(readonly=True, states={'draft': [('readonly', False)]})
+    cashier = fields.Many2one('res.users', default = lambda self:self.env.user, readonly=True, states={'draft': [('readonly', False)]})
+    state = fields.Selection([
+        ('draft',"Draft"),
+        ('complete',"Posted")], 
+        default = 'draft', readonly=True, states={'draft': [('readonly', False)]})
     gross_amount = fields.Float()
     tax_amount = fields.Float()
     total_amount = fields.Float(compute = 'calculate_amounts')
-    line_ids = fields.One2many('cash.management.petty.cash.lines','header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
+    line_ids = fields.One2many('cash.management.petty.cash.lines','header_id', readonly=True, states={'draft': [('readonly', False)]})
 
     @api.one
-    @api.onchange('name')
     def get_sequence(self):
-        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
-        sequence = self.env['ir.sequence'].search([('id','=',setup.petty_cash_voucher_numbers.id)])
-        self.name = sequence.next_by_id(sequence.id, context = None)
-
-    @api.onchange('paying_bank')
-    def get_account(self):
-        bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
-        self.paying_account_no = bank.acc_number
+        if self.name == False:
+            setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+            sequence = self.env['ir.sequence'].search([('id','=',setup.petty_cash_voucher_numbers.id)])
+            self.name = sequence.next_by_id(sequence.id, context = None)
 
     @api.one
     @api.depends('line_ids')
@@ -139,66 +169,86 @@ class petty_cash_header(models.Model):
         self.total_amount = sum(line.amount for line in self.line_ids)
 
     @api.one
-    def action_post(self):
+    def mark_as_draft(self):
+        self.state = 'draft'
+
+    @api.one
+    def mark_as_complete(self):
+        self.state = 'complete'
+
+    @api.one
+    def action_post(self): 
         #date
-        today = datetime.now().strftime("%Y/%m/%d")
+        if self.date != False:
+            today = self.date
+        else:
+            today = datetime.now().strftime("%Y/%m/%d")
         #create journal header
         paying_bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
 
         journal = self.env['account.journal'].search([('id','=',paying_bank.journal_id.id)]) #get journal id
+        
         #period
         period = self.env['account.period'].search([('state','=','draft'),('date_start','<=',today),('date_stop','>=',today)])
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
-        move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
-            'date':today})
-        move_id = move.id
-
+        
         #create journal lines
         journal_lines = self.env['account.move.line']
 
-        #dr = receiving_bank.journal_id.default_debit_account_id.id
         cr = paying_bank.journal_id.default_credit_account_id.id
 
+        move_line_vals = []
+        
+        #post bank entry
+        move_line_vals.append((0, 0,{
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'date':today,
+                'name':'Petty Cash::' + self.name,
+                'account_id':cr,
+                'debit':0,
+                'credit':self.total_amount
+                }))
+        
+        # post lines
         for line in self.line_ids:
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount})
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Petty Cash::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount})
+            move_line_vals.append((0, 0,{
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'date':today,
+                'name':line.description +'::' + self.name,
+                'account_id':line.account_id.id,
+                'debit':line.amount,
+                'credit':0
+                }))
+
+        move = journal_header.create({
+            'journal_id':journal.id,
+            'period_id':period_id,
+            'state':'draft',
+            'name':self.name,
+            'date':today,
+            'line_id': move_line_vals
+            })
 
         move.post()
-        self.posted = True
-        self.state = 'approved'
-
-    @api.one
-    def request(self):
-        self.state = 'pending'
-        #requests = self.env['cash.management.petty.cash.header'].search([('state','=','draft')])
-        return {'type':'ir.actions.act_window',
-        'res_model':'cash.management.petty.cash.header',
-        'view_type':'form',
-        'view_mode':'tree',
-        'target':'new',
-        }
 
 
-class petty_cash_details(models.Model):
+class PettyCashLines(models.Model):
     _name = 'cash.management.petty.cash.lines'
 
     header_id = fields.Many2one('cash.management.petty.cash.header')
     payment_type = fields.Many2one('cash.management.receipts.and.payment.types', domain = [('transaction_type','=','petty')])
-    account_no = fields.Char()
-    account_name = fields.Many2one('account.account')
+    account_id = fields.Many2one('account.account', oldname = 'account_name')
     description = fields.Char()
-    tax = fields.Char()#consider using many2many field
-    tax_amount = fields.Float()
-    amount = fields.Float()
+    amount = fields.Float() 
 
     @api.onchange('payment_type')
     def get_accounts(self):
-        payment_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.payment_type.id)])
-        self.account_name = payment_type.account_name
-        self.description = payment_type.description
-
+        self.account_id = self.payment_type.account_id.id
+        self.description = self.payment_type.description
 
 class receipt_header(models.Model):
     _name = 'cash.management.receipt.header'
@@ -216,10 +266,6 @@ class receipt_header(models.Model):
     total_amount = fields.Float(compute = 'sum_totals')
     state = fields.Selection([('draft',"Draft"),('received',"Recieved")], default = 'draft')
     line_ids = fields.One2many('cash.management.receipt.lines','header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -278,39 +324,48 @@ class receipt_details(models.Model):
     account_name = fields.Many2one('account.account')
     description = fields.Char()
     amount = fields.Float()
+    date = fields.Date()
 
     @api.onchange('receipt_type')
     def get_accounts(self):
         receipt_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.receipt_type.id)])
         self.account_name = receipt_type.account_name
         self.description = receipt_type.description
+        self.date = self.header_id.date
 
 class bank_transfer_header(models.Model):
     _name = 'cash.management.bank.transfer.header'
 
     name = fields.Char(string = "No.")
-    date = fields.Date()
-    paying_bank = fields.Many2one('res.bank')
-    paying_account_no = fields.Char()
-    paying_account_balance = fields.Float()
-    receiving_bank = fields.Many2one('res.bank')
-    receiving_account_no = fields.Char()
-    receiving_account_balance = fields.Float()
-    state = fields.Selection([('draft',"Draft"),('ready',"Ready")], default = 'draft')
-    posted = fields.Boolean()
-    amount = fields.Float()
-    remarks = fields.Text()
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
+    date = fields.Date(readonly=True, states={'draft': [('readonly', False)]})
+    paying_bank = fields.Many2one('res.bank', readonly=True, states={'draft': [('readonly', False)]})
+    paying_account_no = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    paying_account_balance = fields.Float(editable = False, store = True)
+    receiving_bank = fields.Many2one('res.bank', readonly=True, states={'draft': [('readonly', False)]})
+    receiving_account_no = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    receiving_account_balance = fields.Float(editable = False, store = True)
+    state = fields.Selection([
+        ('draft',"Draft"),
+        ('complete',"Complete"),
+        ], default = 'draft')
+    amount = fields.Float(readonly=True, states={'draft': [('readonly', False)]})
+    remarks = fields.Text(readonly=True, states={'draft': [('readonly', False)]})
+    
 
     @api.one
-    @api.onchange('name')
     def get_sequence(self):
-        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
-        sequence = self.env['ir.sequence'].search([('id','=',setup.bank_transfer_numbers.id)])
-        self.name = sequence.next_by_id(sequence.id, context = None)
+        if self.name == False:
+            setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+            sequence = self.env['ir.sequence'].search([('id','=',setup.bank_transfer_numbers.id)])
+            self.name = sequence.next_by_id(sequence.id, context = None)
+
+    @api.one
+    def mark_as_draft(self):
+        self.state = 'draft'
+
+    @api.one
+    def mark_as_complete(self):
+        self.state = 'complete'
 
     @api.onchange('paying_bank','receiving_bank')
     def get_account(self):
@@ -327,8 +382,11 @@ class bank_transfer_header(models.Model):
     def action_post(self):
         if self.paying_account_balance > self.amount:
             #date
-            today = datetime.now().strftime("%Y/%m/%d")
-            #setup = self.env['sacco.setup'].search([('id','=',1)])
+            if self.date != False:
+                today = self.date
+            else:
+                today = datetime.now().strftime("%Y/%m/%d")
+
             #create journal header
             receiving_bank = self.env['res.partner.bank'].search([('bank','=',self.receiving_bank.id)])
             paying_bank = self.env['res.partner.bank'].search([('bank','=',self.paying_bank.id)])
@@ -343,33 +401,54 @@ class bank_transfer_header(models.Model):
             journal_header = self.env['account.move']#reference to journal entry
 
 
-            move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
-                'date':today})
+            # move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
+            #     'date':today})
 
-            move_id = move.id
+            # move_id = move.id
 
-            #create journal lines
-
-            journal_lines = self.env['account.move.line']
+            # #create journal lines
+            # journal_lines = self.env['account.move.line']
 
             dr = receiving_bank.journal_id.default_debit_account_id.id
             cr = paying_bank.journal_id.default_credit_account_id.id
 
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Bank Transfer','account_id':dr,'move_id':move_id,'debit':self.amount})
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Bank Transfer','account_id':cr,'move_id':move_id,'credit':self.amount})
+            move_line_vals = []
+        
+            #post destination entry
+            move_line_vals.append((0, 0,{
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'date':today,
+                'name':'Bank Transfer',
+                'account_id':dr,
+                'debit':self.amount,
+                'credit':0
+                }))
+            
+            # post source entry
+            move_line_vals.append((0, 0,{
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'date':today,
+                'name':'Bank Transfer',
+                'account_id':cr,
+                'debit':0,
+                'credit':self.amount
+                }))
+
+            move = journal_header.create({
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'state':'draft',
+                'name':self.name,
+                'date':today,
+                'line_id': move_line_vals
+                })
 
             move.post()
-            self.posted = True
         else:
             raise ValidationError("Your transfer exceeds the Bank Balance")
 
-    @api.one
-    def confirm(self):
-        self.state = 'ready'
-
-    @api.one
-    def reset(self):
-        self.state = 'draft'
 
 class staff_advance_header(models.Model):
     _name = 'cash.management.staff.advance.header'
@@ -390,10 +469,6 @@ class staff_advance_header(models.Model):
     posted = fields.Boolean()
     surrendered = fields.Boolean()
     line_ids = fields.One2many('cash.management.staff.advance.lines', 'header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -479,10 +554,6 @@ class staff_advance_surrender_header(models.Model):
     remarks = fields.Text()
     posted = fields.Boolean()
     line_ids = fields.One2many('cash.management.staff.advance.surrender.lines', 'header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -598,10 +669,6 @@ class travel_advance_header(models.Model):
     posted = fields.Boolean()
     surrendered = fields.Boolean()
     line_ids = fields.One2many('cash.management.travel.advance.lines', 'header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -688,10 +755,6 @@ class travel_advance_surrender_header(models.Model):
     remarks = fields.Text()
     posted = fields.Boolean()
     line_ids = fields.One2many('cash.management.travel.advance.surrender.lines', 'header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
 
     @api.one
     @api.onchange('name')
@@ -788,50 +851,83 @@ class staff_claim(models.Model):
     _name = 'cash.management.staff.claim'
 
     name = fields.Char(string = 'No.')
-    date = fields.Date(default = fields.Date.today)
-    claim_by = fields.Many2one('res.partner')
-    purpose = fields.Text()
-    paying_bank = fields.Many2one('res.bank')
-    paying_account_name = fields.Char()
-    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")])
-    cheque_no = fields.Char()
-    total_amount = fields.Float(compute = 'compute_totals')
-    paid = fields.Float(compute = 'compute_payments')
-    balance = fields.Float(compute = 'compute_payments')
-    payment_ids = fields.One2many('cash.management.payment.header', 'claim_id', editable = False)
-    state = fields.Selection([('draft',"Draft"),('open',"Open"),('claimed',"Claimed")], default = 'draft')
-    cashier = fields.Many2one('res.users', default = lambda self:self.env.user)
-    posted = fields.Boolean()
+    date = fields.Date(default = fields.Date.today, readonly=True, states={'draft': [('readonly', False)]})
+    claim_by = fields.Many2one('res.partner', readonly=True, states={'draft': [('readonly', False)]})
+    purpose = fields.Text(readonly=True, states={'draft': [('readonly', False)]})
+    paying_bank = fields.Many2one('res.bank', readonly=True, states={'draft': [('readonly', False)]})
+    # paying_account_name = fields.Char()
+    payment_method = fields.Selection([('cash',"Cash"),('cheque',"Cheque")], readonly=True, states={'draft': [('readonly', False)]})
+    cheque_no = fields.Char(readonly=True, states={'draft': [('readonly', False)]})
+    total_amount = fields.Float(compute = 'compute_totals', store = '_check_to_recompute')
+    paid = fields.Float(compute = 'compute_totals', store = '_check_to_recompute')
+    balance = fields.Float(compute = 'compute_totals', store = '_check_to_recompute')
+    payment_ids = fields.One2many('cash.management.payment.header', 'claim_id')
+    state = fields.Selection([
+        ('draft',"Draft"),
+        ('open',"Open"),
+        ('complete',"Claimed")
+        ], default = 'draft')
+    cashier = fields.Many2one('res.users', default = lambda self:self.env.user, readonly=True, states={'draft': [('readonly', False)]})
+    # posted = fields.Boolean()
     line_ids = fields.One2many('cash.management.staff.claim.lines', 'header_id')
-    dimension1 = fields.Many2one('dimension.values', domain = [('sequence','=',1)])
-    dimension2 = fields.Many2one('dimension.values', domain = [('sequence','=',2)])
-    dimension3 = fields.Many2one('dimension.values', domain = [('sequence','=',3)])
-    dimension4 = fields.Many2one('dimension.values', domain = [('sequence','=',4)])
+    
+    @api.one
+    def worker(self):
+        claims = self.env['cash.management.staff.claim'].search([])
+        for claim in claims:
+            claim.compute_totals()
 
     @api.one
-    @api.onchange('name')
     def get_sequence(self):
-        setup = self.env['cash.management.general.setup'].search([('id','=',1)])
-        sequence = self.env['ir.sequence'].search([('id','=',setup.staff_claim_numbers.id)])
-        self.name = sequence.next_by_id(sequence.id, context = None)
-
-    #@api.one
-    #def confirm(self):
-        #self.state = 'ready'
+        if self.name == False:
+            setup = self.env['cash.management.general.setup'].search([('id','=',1)])
+            sequence = self.env['ir.sequence'].search([('id','=',setup.staff_claim_numbers.id)])
+            self.name = sequence.next_by_id(sequence.id, context = None)
 
     @api.one
-    def reset(self):
+    def _check_to_recompute(self):
+        return [self.id]
+    
+    @api.multi
+    def mark_as_draft(self):
         self.state = 'draft'
 
+    @api.multi
+    def mark_as_open(self):
+        self.state = 'open'
+
+    @api.multi
+    def mark_as_complete(self):
+        self.state = 'complete'
+
+    @api.multi
+    def check_balance(self):
+        if self.balance <=0:
+            return True
+        else:
+            return False 
+
+    @api.multi
+    def claim_get(self):
+        res = [self.id]        
+
+        return res
+
     @api.one
-    @api.depends('line_ids')
+    @api.depends('payment_ids','line_ids','paid','total_amount')
     def compute_totals(self):
         self.total_amount = sum(line.amount for line in self.line_ids)
+        self.paid = sum(payment.total_amount for payment in self.payment_ids)
+        self.balance = self.total_amount - self.paid
+        
 
     @api.one
     def action_post(self):
         #date
-        today = datetime.now().strftime("%Y/%m/%d")
+        if self.date != False:
+            today = self.date
+        else:
+            today = datetime.now().strftime("%Y/%m/%d")
 
         #setup
         setup = self.env['cash.management.general.setup'].search([('id','=',1)])
@@ -843,50 +939,60 @@ class staff_claim(models.Model):
         period_id = period.id
 
         journal_header = self.env['account.move']#reference to journal entry
-        move = journal_header.create({'journal_id':journal.id,'period_id':period_id,'state':'draft','name':self.name,
-            'date':today})
-        move_id = move.id
-
-        #create journal lines
-        journal_lines = self.env['account.move.line']
-        #dr =
+        
         cr = setup.staff_claims_payable_account.id
 
+        move_line_vals = []
+        
+        #post creditor entry
+        move_line_vals.append((0, 0,{
+            'journal_id':journal.id,
+            'period_id':period_id,
+            'date':today,
+            'name':'Staff Claim::' + self.name,
+            'account_id':cr,
+            'debit':0,
+            'credit':self.total_amount,
+            'partner_id':self.claim_by.id
+            }))
+        
+        # post expense lines
         for line in self.line_ids:
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Claim::' + self.name,'account_id':line.account_name.id,'move_id':move_id,'debit':line.amount,'partner_id':self.claim_by.id})
-            journal_lines.create({'journal_id':journal.id,'period_id':period_id,'date':today,'name':'Staff Claim::' + self.name,'account_id':cr,'move_id':move_id,'credit':line.amount,'partner_id':self.claim_by.id})
+            move_line_vals.append((0, 0,{
+                'journal_id':journal.id,
+                'period_id':period_id,
+                'date':today,
+                'name':line.description +'::' + self.name,
+                'account_id':line.account_id.id,
+                'debit':line.amount,
+                'credit':0,
+                'partner_id':self.claim_by.id
+                }))
+
+        move = journal_header.create({
+            'journal_id':journal.id,
+            'period_id':period_id,
+            'state':'draft',
+            'name':self.name,
+            'date':today,
+            'line_id': move_line_vals
+            })
 
         move.post()
-        self.posted = True
-        self.state = 'open'
-
-    @api.one
-    @api.depends('payment_ids')
-    def compute_payments(self):
-        self.paid = sum(payment.total_amount for payment in self.payment_ids)
-        if self.paid < self.total_amount:
-            self.balance = self.total_amount - self.paid
-        else:
-            self.balance = 0
-
-    @api.onchange('balance', 'posted')
-    def check_state(self):
-        if self.posted and self.balance == 0:
-            self.state = 'claimed'
 
 class staff_claim_lines(models.Model):
     _name = 'cash.management.staff.claim.lines'
 
     header_id = fields.Many2one('cash.management.staff.claim')
     claim_type = fields.Many2one('cash.management.receipts.and.payment.types', domain = [('transaction_type','=','claim')])
-    account_name = fields.Many2one('account.account')
+    account_id = fields.Many2one('account.account', oldname = 'account_name')
     description = fields.Char()
     amount = fields.Float()
 
     @api.onchange('claim_type')
     def get_accounts(self):
         claim_type = self.env['cash.management.receipts.and.payment.types'].search([('id','=',self.claim_type.id)])
-        self.account_name = claim_type.account_name.id
+        self.account_id = claim_type.account_id.id
         self.description = claim_type.description
 
 class receipt_payment_types(models.Model):
@@ -895,8 +1001,8 @@ class receipt_payment_types(models.Model):
     name = fields.Char()
     transaction_type = fields.Selection([('receipt',"Receipt"),('payment',"Payment"),('staff',"Staff Advance"),('travel',"Travel Advance"),('petty',"Petty Cash"),('claim',"Claim")])
     description = fields.Char()
-    account_no = fields.Char()
-    account_name = fields.Many2one('account.account')
+    # account_no = fields.Char()
+    account_id = fields.Many2one('account.account', oldname = 'account_name', string = 'Account')
 
 
 

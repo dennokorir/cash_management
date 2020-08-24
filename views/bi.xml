@@ -1,0 +1,46 @@
+<openerp>
+    <data>
+        <record model = 'ir.ui.view' id = 'cash_management_payments_graph'>
+            <field name = 'name'>Payments Graph</field>
+            <field name = 'model'>cash.management.payment.lines</field>
+            <field name = 'arch' type = 'xml'>
+                <graph string="Payments Analysis">
+                    <field name="date" type='row'/>
+                    <field name='payment_type' type='row'/>
+                    <field name="amount" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record model = 'ir.actions.act_window' id = 'cash_management_payments_graph_action'>
+            <field name = 'name'>Payment Analysis</field>
+            <field name = 'res_model'>cash.management.payment.lines</field>
+            <field name = 'view_type'>form</field>
+            <field name = 'view_mode'>graph</field>
+        </record>
+
+        <menuitem name = 'Payments Analysis' id = 'cash_management_payments_analysis' parent = 'cash_management_payments_main_menu' action = "cash_management_payments_graph_action" sequence = "15"/>
+
+        <record model = 'ir.ui.view' id = 'cash_management_receipts_graph'>
+            <field name = 'name'>Receipts Graph</field>
+            <field name = 'model'>cash.management.receipt.lines</field>
+            <field name = 'arch' type = 'xml'>
+                <graph string="Receipts Analysis">
+                    <field name="date" type='row'/>
+                    <field name='receipt_type' type='row'/>
+                    <field name="amount" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record model = 'ir.actions.act_window' id = 'cash_management_receipts_graph_action'>
+            <field name = 'name'>Receipts Analysis</field>
+            <field name = 'res_model'>cash.management.receipt.lines</field>
+            <field name = 'view_type'>form</field>
+            <field name = 'view_mode'>graph</field>
+        </record>
+
+        <menuitem name = 'Receipts Analysis' id = 'cash_management_receipts_analysis' parent = 'cash_management_receipts_main_menu' action = "cash_management_receipts_graph_action" sequence = "15"/>
+
+    </data>
+</openerp>

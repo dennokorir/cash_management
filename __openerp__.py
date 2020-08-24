@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "cash_management",
+    'name': "Cash Management",
 
     'summary': """
         This module will be used to perform cash and bank transactions easily within Odoo
@@ -24,11 +24,15 @@
 
     # always loaded
     'data': [
-        # 'security/ir.model.access.csv',
+        'security/user_groups.xml',
+        'security/ir.model.access.csv',
         'views/wizards.xml',
         'templates.xml',
         'views/cashmanagement_views.xml',
         'views/sequences.xml',
+        'views/config.xml',
+        'views/bi.xml',
+        'views/workflows.xml'
     ],
     # only loaded in demonstration mode
     'demo': [

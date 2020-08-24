@@ -1,0 +1,22 @@
+<openerp>
+	<data>
+		<record model="ir.module.category" id="cash_management_module_management">
+			<field name="name">Cash Management Module Access</field>
+			<field name="description">User access level for Cash Management module</field>
+			<field name="sequence">4</field>
+		</record>
+
+		<record id="cash_management_group_user" model="res.groups">
+			<field name="name">User</field>
+			<field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+			<field name="users" eval="[(4, ref('base.user_root'))]"/>
+			<field name="category_id" ref="cash_management.cash_management_module_management"/>
+		</record>
+
+		<record id="cash_management_group_admin" model="res.groups">
+			<field name="name">Administrator</field>
+			<field name="implied_ids" eval="[(4, ref('cash_management.cash_management_group_user'))]"/>
+			<field name="category_id" ref="cash_management.cash_management_module_management"/>
+		</record>
+	</data>
+</openerp>

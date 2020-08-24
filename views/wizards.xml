@@ -14,7 +14,7 @@
                         <group>
                             <field name = 'date'/>
                             <field name = 'payment_reference'/>
-                            <!--<field name = 'claim'/>-->
+                            <field name = 'claim_id' invisible = '1'/>
                         </group>
                     </group>
                     <footer>

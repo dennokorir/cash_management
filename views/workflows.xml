@@ -1,0 +1,170 @@
+<openerp>
+	<data>
+		<!-- Petty Cash Workflow -->
+		<!-- =================== -->
+		<record model = 'workflow' id = 'petty_cash_workflow'>
+			<field name = 'name'>Petty Cash Workflow</field>
+			<field name = 'osv'>cash.management.petty.cash.header</field>
+			<field name = 'on_create'>true</field>
+		</record>
+
+		<record id = "activity_petty_cash_start" model = "workflow.activity"> 
+			<field name ="wkf_id" ref = "petty_cash_workflow"/>
+			<field name = "flow_start">True</field>
+			<field name = "name">Petty Cash Start</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				mark_as_draft()
+				get_sequence()
+			</field>
+		</record>
+
+		<record id = "activity_petty_cash_complete" model = "workflow.activity">
+			<field name ="wkf_id" ref = "petty_cash_workflow"/>
+			<field name = "flow_stop">True</field>
+			<field name = "name">Petty Cash Complete</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				action_post()
+				mark_as_complete()
+			</field>
+		</record>
+
+		<!-- Transitions -->
+		<record id="trans_petty_cash_post" model="workflow.transition">
+			<field name="act_from" ref="activity_petty_cash_start"/>
+			<field name="act_to" ref="activity_petty_cash_complete"/>
+			<field name = 'signal'>send_for_posting</field>
+		</record>
+
+		<!-- Payment Voucher Workflow -->
+		<!-- ======================== -->
+		<record model = 'workflow' id = 'payment_voucher_workflow'>
+			<field name = 'name'>Payment Vouchers Workflow</field>
+			<field name = 'osv'>cash.management.payment.header</field>
+			<field name = 'on_create'>true</field>
+		</record>
+
+		<record id = "activity_payment_voucher_start" model = "workflow.activity">
+			<field name ="wkf_id" ref = "payment_voucher_workflow"/>
+			<field name = "flow_start">True</field>
+			<field name = "name">Payment Voucher Start</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				mark_as_draft()
+				get_sequence()
+			</field>
+		</record>
+
+		<record id = "activity_payment_voucher_complete" model = "workflow.activity">
+			<field name ="wkf_id" ref = "payment_voucher_workflow"/>
+			<field name = "flow_stop">True</field>
+			<field name = "name">Payment Voucher Complete</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				action_post()
+				mark_as_complete()
+			</field>
+		</record>
+
+		<!-- Transitions -->
+		<record id="trans_payment_voucher_post" model="workflow.transition">
+			<field name="act_from" ref="activity_payment_voucher_start"/>
+			<field name="act_to" ref="activity_payment_voucher_complete"/>
+			<field name = 'signal'>send_for_posting</field>
+		</record>
+
+		<!-- Staff Claim Workflow -->
+		<!-- ======================== -->
+		<record model = 'workflow' id = 'staff_claim_workflow'>
+			<field name = 'name'>Staff Claim Workflow</field>
+			<field name = 'osv'>cash.management.staff.claim</field>
+			<field name = 'on_create'>true</field>
+		</record>
+
+		<record id = "activity_staff_claim_start" model = "workflow.activity">
+			<field name ="wkf_id" ref = "staff_claim_workflow"/>
+			<field name = "flow_start">True</field>
+			<field name = "name">Staff Claim Start</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				mark_as_draft()
+				get_sequence()
+			</field>
+		</record>
+
+		<record id = "activity_staff_claim_open" model = "workflow.activity">
+			<field name ="wkf_id" ref = "staff_claim_workflow"/>
+			<field name = "name">Staff Claim Post</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				action_post()
+				mark_as_open()
+			</field>
+		</record>
+
+		<record id = "activity_staff_claim_complete" model = "workflow.activity">
+			<field name ="wkf_id" ref = "staff_claim_workflow"/>
+			<field name = "flow_stop">True</field>
+			<field name = "name">Staff Claim Complete</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				mark_as_complete()
+			</field>
+		</record>
+
+		<!-- Transitions -->
+		<record id="trans_staff_claim_post" model="workflow.transition">
+			<field name="act_from" ref="activity_staff_claim_start"/>
+			<field name="act_to" ref="activity_staff_claim_open"/>
+			<field name = 'signal'>send_for_posting</field>
+		</record>
+
+		<record id="trans_staff_claim_close" model="workflow.transition">
+			<field name="act_from" ref="activity_staff_claim_open"/>
+			<field name="act_to" ref="activity_staff_claim_complete"/>
+			<!-- <field name = 'condition'>balance &lt;=0</field> -->
+			<field name="trigger_model">cash.management.staff.claim</field>
+            <field name="trigger_expr_id">claim_get()</field>
+			<field name = 'condition'>check_balance()</field>
+		</record>
+
+		<!-- Bank and Cash Transfers Workflow -->
+		<!-- =================== -->
+		<record model = 'workflow' id = 'cash_transfer_workflow'>
+			<field name = 'name'>Bank and Cash Transfers Workflow</field>
+			<field name = 'osv'>cash.management.bank.transfer.header</field>
+			<field name = 'on_create'>true</field>
+		</record>
+
+		<record id = "activity_cash_transfer_start" model = "workflow.activity"> 
+			<field name ="wkf_id" ref = "cash_transfer_workflow"/>
+			<field name = "flow_start">True</field>
+			<field name = "name">Cash Transfer Start</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				mark_as_draft()
+				get_sequence()
+			</field>
+		</record>
+
+		<record id = "activity_cash_transfer_complete" model = "workflow.activity">
+			<field name ="wkf_id" ref = "cash_transfer_workflow"/>
+			<field name = "flow_stop">True</field>
+			<field name = "name">Cash Transfer Complete</field>
+			<field name = "kind">function</field>
+			<field name = "action">
+				action_post()
+				mark_as_complete()
+			</field>
+		</record>
+
+		<!-- Transitions -->
+		<record id="trans_cash_transfer_post" model="workflow.transition">
+			<field name="act_from" ref="activity_cash_transfer_start"/>
+			<field name="act_to" ref="activity_cash_transfer_complete"/>
+			<field name = 'signal'>send_for_posting</field>
+		</record>
+
+	</data>
+</openerp>
